@@ -11,6 +11,8 @@
 // @connect      192.168.1.10:5001
 // @connect      http://192.168.1.10:5001
 // @connect      *
+// @updateURL    https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanKasir.user.js
+// @downloadURL  https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanKasir.user.js
 // ==/UserScript==
 
 (function() {

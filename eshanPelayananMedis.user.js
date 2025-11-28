@@ -12,6 +12,8 @@
 // @connect      generativelanguage.googleapis.com
 // @connect      192.168.1.10
 // @connect      192.168.1.10:5001
+// @updateURL    https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
+// @downloadURL  https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
 // ==/UserScript==
 
 (function() {

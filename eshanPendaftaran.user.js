@@ -12,6 +12,8 @@
 // @connect      script.google.com
 // @connect      script.googleusercontent.com
 // @connect      *
+// @updateURL    https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPendaftaran.user.js
+// @downloadURL  https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPendaftaran.user.js
 // ==/UserScript==
 
 (function() {
