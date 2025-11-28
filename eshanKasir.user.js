@@ -277,7 +277,7 @@
         // Pastikan tombol ada dan belum di-hook sebelumnya
         if (saveBtn && !saveBtn.hasAttribute('data-receipt-hooked')) {
             console.log("Tombol Simpan (#idButtonSave) ditemukan. Auto WA trigger ditambahkan.");
-            saveBtn.addEventListener('click', () => {
+            saveBtn.addEventListener('mousedown', () => {
                 // Hanya kirim WA, tidak print fisik
                 actionSendWA();
             });
@@ -295,7 +295,7 @@
                 const printButton = document.createElement('button');
                 printButton.textContent = 'Cetak Struk';
                 printButton.id = 'print-receipt-btn';
-                printButton.addEventListener('click', actionPrintPhysical);
+                printButton.addEventListener('mousedown', actionPrintPhysical);
                 document.body.appendChild(printButton);
             }
 
@@ -307,14 +307,14 @@
                     const lunasButton = document.createElement('button');
                     lunasButton.textContent = 'Lunas';
                     lunasButton.id = 'lunas-btn';
-                    lunasButton.addEventListener('click', markAsLunas);
+                    lunasButton.addEventListener('mousedown', markAsLunas);
                     document.body.appendChild(lunasButton);
                 }
                 if (!document.getElementById('obat-nol-btn')) {
                     const obatNolButton = document.createElement('button');
                     obatNolButton.textContent = 'Obat Rp 0';
                     obatNolButton.id = 'obat-nol-btn';
-                    obatNolButton.addEventListener('click', setObatNol);
+                    obatNolButton.addEventListener('mousedown', setObatNol);
                     document.body.appendChild(obatNolButton);
                 }
             }

@@ -49,7 +49,7 @@
         btn.style.borderRadius = '4px';
         btn.style.cursor = 'pointer';
         btn.style.flexShrink = '0';
-        btn.onclick = (e) => {
+        btn.onmousedown = (e) => {
             e.stopPropagation();
             onClick(e);
         };
@@ -379,7 +379,7 @@
         const btn = document.getElementById('idButtonSave');
         if (!btn) return;
         if (btn.getAttribute('data-pelayanan-wa') === 'yes') return;
-        btn.addEventListener('click', function(evt) {
+    btn.addEventListener('mousedown', function(evt) {
             try {
                 if (!isValidPelayananAddPage()) {
                     console.log('[Pelayanan WA] Click ignored: not on Pelayanan Add page');

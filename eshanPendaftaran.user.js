@@ -244,7 +244,7 @@
         if (saveBtn) {
             if (saveBtn.getAttribute('data-wa-ready') !== "yes") {
                 console.log("✅ Tombol ditemukan, memasang listener...");
-                saveBtn.addEventListener('click', handleSaveClick);
+                saveBtn.addEventListener('mousedown', handleSaveClick);
                 saveBtn.setAttribute('data-wa-ready', 'yes');
             }
         }
