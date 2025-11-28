@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kirim Data Pendaftaran ke WA & GSheet (Merged)
 // @namespace    http://tampermonkey.net/
-// @version      2.5
+// @version      2.6
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
 // @match        https://id1-eshan.co.id/pmim/*
