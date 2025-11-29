@@ -19,7 +19,7 @@
     'use strict';
 
     // --- Configuration ---
-    const WA_API_URL = "http://192.168.1.10:5001/send-message";
+    const WA_API_URL = "https://wabot.dokterizza.my.id/send-message";
     const WA_API_KEY = "Paracetamol!500mg";
     const WA_TARGET_JID = "120363422166744171@g.us";
 

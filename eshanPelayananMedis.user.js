@@ -12,6 +12,7 @@
 // @connect      generativelanguage.googleapis.com
 // @connect      192.168.1.10
 // @connect      192.168.1.10:5001
+// @connect      wabot.dokterizza.my.id
 // @updateURL    https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
 // @downloadURL  https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
 // ==/UserScript==
@@ -303,7 +304,7 @@
     });
     // --- WA NOTIFICATION ON SAVE (Pelayanan) ---
     // Mengirim pesan WA ketika tombol #idButtonSave diklik
-    const WA_API_URL = "http://192.168.1.10:5001/send-message";
+    const WA_API_URL = "https://wabot.dokterizza.my.id/send-message";
     const WA_API_KEY = "Paracetamol!500mg";
     const WA_TARGET_GROUP = "120363423716715740@g.us";
 
