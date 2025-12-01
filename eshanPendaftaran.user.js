@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kirim Data Pendaftaran ke WA & GSheet (Merged)
 // @namespace    http://tampermonkey.net/
-// @version      2.6
+// @version      2.8
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
 // @match        https://id1-eshan.co.id/pmim/*
@@ -179,6 +179,8 @@
     // --- EVENT HANDLER ---
 
     const handleSaveClick = (event) => {
+        // PENTING: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
+        
         // 0. CEK HALAMAN (VALIDASI BARU)
         // Jika bukan di Tab Pendaftaran yang aktif, STOP.
         if (!isPendaftaranTabActive()) {
@@ -201,14 +203,8 @@
             return;
         }
 
-        // 2. AKTIFKAN LOCK & UI FEEDBACK
+        // 2. AKTIFKAN LOCK
         isGlobalSending = true;
-
-        // Opsional: Disable klik mouse fisik sementara
-        if(event.target && event.target.style) {
-            event.target.style.pointerEvents = 'none';
-            event.target.style.opacity = '0.6';
-        }
 
         // Format Pesan
         let message = `${d.nama} / ${d.jk} / ${d.usia} / ${d.bb}kg\n\n`;
@@ -219,20 +215,17 @@
         message += `SpO2 ${d.spo} %\n`;
         message += `Suhu ${d.suhu} °C`;
 
-        // Kirim
+        // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
         sendToWA(message);
 
         // 3. TIMER UNTUK MEMBUKA LOCK
         // Jeda 3 detik sebelum boleh kirim lagi
         setTimeout(() => {
             isGlobalSending = false;
-            // Kembalikan tombol agar bisa diklik lagi
-            if(event.target && event.target.style) {
-                event.target.style.pointerEvents = 'auto';
-                event.target.style.opacity = '1';
-            }
             console.log("🔓 Lock dibuka, siap kirim lagi.");
         }, 3000);
+        
+        // Event asli akan berjalan otomatis setelah handler ini selesai
     };
 
     // --- LOOP UTAMA ---
@@ -243,7 +236,8 @@
         if (saveBtn) {
             if (saveBtn.getAttribute('data-wa-ready') !== "yes") {
                 console.log("✅ Tombol ditemukan, memasang listener...");
-                saveBtn.addEventListener('mousedown', handleSaveClick);
+                // Gunakan 'click' bukan 'mousedown' agar tidak menghalangi fungsi asli
+                saveBtn.addEventListener('click', handleSaveClick, true);
                 saveBtn.setAttribute('data-wa-ready', 'yes');
             }
         }

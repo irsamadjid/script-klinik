@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Gemini API) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      2.5
+// @version      2.7
 // @description  Menambahkan tombol panggil TTS (menggunakan logika PCM-ke-WAV).
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -50,7 +50,7 @@
         btn.style.borderRadius = '4px';
         btn.style.cursor = 'pointer';
         btn.style.flexShrink = '0';
-        btn.onmousedown = (e) => {
+        btn.onclick = (e) => {
             e.stopPropagation();
             onClick(e);
         };
@@ -379,16 +379,19 @@
         const btn = document.getElementById('idButtonSave');
         if (!btn) return;
         if (btn.getAttribute('data-pelayanan-wa') === 'yes') return;
-    btn.addEventListener('mousedown', function(evt) {
+        
+        // PERBAIKAN: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
+        btn.addEventListener('click', function(evt) {
             try {
                 if (!isValidPelayananAddPage()) {
                     console.log('[Pelayanan WA] Click ignored: not on Pelayanan Add page');
                     return;
                 }
                 const name = getPatientNameHeader() || '-';
+                // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
                 sendPelayananWA(name);
             } catch (e) { console.error('[Pelayanan WA] handler error', e); }
-        });
+        }, true);
         btn.setAttribute('data-pelayanan-wa', 'yes');
         console.log('[Pelayanan WA] Hooked #idButtonSave');
     }

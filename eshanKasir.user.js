@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.2
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -275,10 +275,11 @@
         // Pastikan tombol ada dan belum di-hook sebelumnya
         if (saveBtn && !saveBtn.hasAttribute('data-receipt-hooked')) {
             console.log("Tombol Simpan (#idButtonSave) ditemukan. Auto WA trigger ditambahkan.");
-            saveBtn.addEventListener('mousedown', () => {
-                // Hanya kirim WA, tidak print fisik
+            // PERBAIKAN: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
+            saveBtn.addEventListener('click', () => {
+                // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
                 actionSendWA();
-            });
+            }, true);
             saveBtn.setAttribute('data-receipt-hooked', 'true');
         }
     };
@@ -293,7 +294,7 @@
                 const printButton = document.createElement('button');
                 printButton.textContent = 'Cetak Struk';
                 printButton.id = 'print-receipt-btn';
-                printButton.addEventListener('mousedown', actionPrintPhysical);
+                printButton.addEventListener('click', actionPrintPhysical);
                 document.body.appendChild(printButton);
             }
 
@@ -305,14 +306,14 @@
                     const lunasButton = document.createElement('button');
                     lunasButton.textContent = 'Lunas';
                     lunasButton.id = 'lunas-btn';
-                    lunasButton.addEventListener('mousedown', markAsLunas);
+                    lunasButton.addEventListener('click', markAsLunas);
                     document.body.appendChild(lunasButton);
                 }
                 if (!document.getElementById('obat-nol-btn')) {
                     const obatNolButton = document.createElement('button');
                     obatNolButton.textContent = 'Obat Rp 0';
                     obatNolButton.id = 'obat-nol-btn';
-                    obatNolButton.addEventListener('mousedown', setObatNol);
+                    obatNolButton.addEventListener('click', setObatNol);
                     document.body.appendChild(obatNolButton);
                 }
             }
