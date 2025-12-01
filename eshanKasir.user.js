@@ -19,8 +19,7 @@
     'use strict';
 
     // --- Configuration ---
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send-message";
-    const WA_API_KEY = "Paracetamol!500mg";
+    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
     const WA_TARGET_JID = "120363422166744171@g.us";
 
     // --- Helper Functions ---
@@ -107,11 +106,10 @@
             url: WA_API_URL,
             headers: {
                 "Content-Type": "application/json",
-                "x-api-key": WA_API_KEY,
                 "Cache-Control": "no-cache"
             },
             data: JSON.stringify({
-                jid: targetJid,
+                to: targetJid,
                 message: messageText
             }),
             anonymous: true,

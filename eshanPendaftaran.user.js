@@ -20,8 +20,7 @@
     'use strict';
 
     // --- KONFIGURASI ---
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send-message";
-    const WA_API_KEY = "Paracetamol!500mg";
+    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
     const WA_TARGET_GROUP = "120363423716715740@g.us";
 
     // --- GLOBAL LOCK VARIABLE (KUNCI UTAMA) ---
@@ -158,8 +157,8 @@
         GM_xmlhttpRequest({
             method: "POST",
             url: WA_API_URL,
-            headers: { "Content-Type": "application/json", "x-api-key": WA_API_KEY },
-            data: JSON.stringify({ jid: WA_TARGET_GROUP, message: messageText }),
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify({ to: WA_TARGET_GROUP, message: messageText }),
             anonymous: true,
             onload: function(res) {
                 if (res.status >= 200 && res.status < 300) {

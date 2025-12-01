@@ -304,8 +304,7 @@
     });
     // --- WA NOTIFICATION ON SAVE (Pelayanan) ---
     // Mengirim pesan WA ketika tombol #idButtonSave diklik
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send-message";
-    const WA_API_KEY = "Paracetamol!500mg";
+    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
     const WA_TARGET_GROUP = "120363423716715740@g.us";
 
     function getPatientNameHeader() {
@@ -328,8 +327,8 @@
             GM_xmlhttpRequest({
                 method: 'POST',
                 url: WA_API_URL,
-                headers: { 'Content-Type': 'application/json', 'x-api-key': WA_API_KEY },
-                data: JSON.stringify({ jid: WA_TARGET_GROUP, message: message }),
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify({ to: WA_TARGET_GROUP, message: message }),
                 anonymous: true,
                 timeout: 10000,
                 onload: function(res) {
