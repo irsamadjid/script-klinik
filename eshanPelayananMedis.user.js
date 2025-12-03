@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Google Translate) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      2.8
+// @version      2.9
 // @description  Tombol panggil pasien menggunakan TTS Google Translate (tanpa API key).
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -197,7 +197,7 @@
         return raw.replace(/^Nama\s*[:\-]?\s*/i, '').trim();
     }
 
-    function sendPelayananWA(patientName) {
+    function sendPelayananWA(patientName, callback) {
         const prefix = '[Pelayanan WA]';
         const message = `pelayanan medis ${patientName} sudah selesai, mohon siapkan obat`;
         console.log(prefix, 'Sending message:', message);
@@ -209,7 +209,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 data: JSON.stringify({ to: WA_TARGET_GROUP, message: message }),
                 anonymous: true,
-                timeout: 10000,
+                timeout: 5000,
                 onload: function(res) {
                     console.log(prefix, 'onload status=', res.status, 'response=', res.responseText);
                     if (res.status >= 200 && res.status < 300) {
@@ -217,16 +217,24 @@
                     } else {
                         console.error(prefix, '❌ Failed to send', res.status, res.statusText, res.responseText);
                     }
+                    // Panggil callback setelah selesai (sukses atau gagal)
+                    if (callback) callback();
                 },
                 onerror: function(err) {
                     console.error(prefix, 'Network error', err);
+                    // Panggil callback meskipun error
+                    if (callback) callback();
                 },
                 ontimeout: function() {
                     console.error(prefix, 'Timeout while sending WA');
+                    // Panggil callback jika timeout
+                    if (callback) callback();
                 }
             });
         } catch (e) {
             console.error(prefix, 'Exception sending WA', e);
+            // Panggil callback jika exception
+            if (callback) callback();
         }
     }
 
@@ -246,6 +254,9 @@
         }
     }
 
+    // --- Global Lock Variable ---
+    let isGlobalSendingPelayanan = false;
+
     function hookSaveButtonPelayanan() {
         // Hanya hook jika halaman valid (breadcrumb sesuai)
         if (!isValidPelayananAddPage()) {
@@ -259,16 +270,51 @@
         if (!btn) return;
         if (btn.getAttribute('data-pelayanan-wa') === 'yes') return;
         
-        // PERBAIKAN: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
+        // PERBAIKAN: Cegah reload, kirim WA dulu, baru lanjutkan save
         btn.addEventListener('click', function(evt) {
             try {
                 if (!isValidPelayananAddPage()) {
                     console.log('[Pelayanan WA] Click ignored: not on Pelayanan Add page');
                     return;
                 }
+
+                // Cek global lock
+                if (isGlobalSendingPelayanan) {
+                    console.warn("⚠️ Pelayanan: Double click dicegah oleh Global Lock.");
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                    return;
+                }
+
                 const name = getPatientNameHeader() || '-';
-                // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
-                sendPelayananWA(name);
+                if (!name || name === '-') {
+                    console.log('[Pelayanan WA] Nama pasien kosong, lanjutkan save normal');
+                    return; // Biarkan proses save normal jalan
+                }
+
+                // Cegah default action (reload/submit)
+                evt.preventDefault();
+                evt.stopPropagation();
+
+                // Aktifkan lock
+                isGlobalSendingPelayanan = true;
+
+                // Kirim WA dengan callback untuk lanjutkan save setelah selesai
+                sendPelayananWA(name, function() {
+                    console.log('📤 Pelayanan WA selesai, melanjutkan aksi save asli...');
+                    
+                    // Lepas lock setelah 1 detik
+                    setTimeout(() => {
+                        isGlobalSendingPelayanan = false;
+                        console.log('🔓 Pelayanan Lock dibuka.');
+                    }, 1000);
+
+                    // Trigger klik asli pada tombol save
+                    btn.removeEventListener('click', arguments.callee, true);
+                    btn.click();
+                    setTimeout(() => btn.addEventListener('click', arguments.callee, true), 2000);
+                });
+
             } catch (e) { console.error('[Pelayanan WA] handler error', e); }
         }, true);
         btn.setAttribute('data-pelayanan-wa', 'yes');

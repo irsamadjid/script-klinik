@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -99,7 +99,7 @@
 
     // --- WhatsApp Functionality ---
 
-    const sendWhatsApp = (targetJid, messageText) => {
+    const sendWhatsApp = (targetJid, messageText, callback) => {
         console.log("=== SENDING WA (Silent) ===");
         GM_xmlhttpRequest({
             method: "POST",
@@ -120,9 +120,19 @@
                 } else {
                    console.error(`Gagal Kirim! Status: ${response.status}\nRespon: ${response.responseText}`);
                 }
+                // Panggil callback setelah selesai (sukses atau gagal)
+                if (callback) callback();
             },
-            onerror: function(err) { console.error("Network Error:", err); },
-            ontimeout: function() { console.error("Timeout! Server tidak merespon."); }
+            onerror: function(err) { 
+                console.error("Network Error:", err);
+                // Panggil callback meskipun error
+                if (callback) callback();
+            },
+            ontimeout: function() { 
+                console.error("Timeout! Server tidak merespon.");
+                // Panggil callback jika timeout
+                if (callback) callback();
+            }
         });
     };
 
@@ -267,6 +277,9 @@
         } catch (e) { console.error(e); }
     };
 
+    // --- Global Lock Variable ---
+    let isGlobalSendingKasir = false;
+
     const hookSaveButton = () => {
         // Hanya hook di halaman Tambah Kasir yang valid
         if (!isValidCashierAddPage()) return;
@@ -275,11 +288,58 @@
         // Pastikan tombol ada dan belum di-hook sebelumnya
         if (saveBtn && !saveBtn.hasAttribute('data-receipt-hooked')) {
             console.log("Tombol Simpan (#idButtonSave) ditemukan. Auto WA trigger ditambahkan.");
-            // PERBAIKAN: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
-            saveBtn.addEventListener('click', () => {
-                // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
-                actionSendWA();
+            
+            // PERBAIKAN: Cegah reload, kirim WA dulu, baru lanjutkan save
+            saveBtn.addEventListener('click', (event) => {
+                // Cek global lock
+                if (isGlobalSendingKasir) {
+                    console.warn("⚠️ Kasir: Double click dicegah oleh Global Lock.");
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+
+                // Cegah default action (reload/submit)
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Aktifkan lock
+                isGlobalSendingKasir = true;
+
+                const data = getTransactionData();
+                if (!data) {
+                    console.log("Kasir: Tidak ada data transaksi, lanjutkan save normal");
+                    // Lepas lock dan lanjutkan
+                    isGlobalSendingKasir = false;
+                    saveBtn.removeEventListener('click', arguments.callee, true);
+                    saveBtn.click();
+                    setTimeout(() => saveBtn.addEventListener('click', arguments.callee, true), 2000);
+                    return;
+                }
+
+                console.log("Memproses Struk Digital (WA)...");
+                let waMessage = `*STRUK KASIR DIGITAL*\nPRAKTEK DOKTER IZZA\n--------------------------------\n`;
+                waMessage += `Tanggal: ${data.tanggalTransaksi}\nPasien : ${data.namaPasien} (${data.noHp})\nAlamat : ${data.alamat}\n--------------------------------\n`;
+                data.items.forEach(item => { waMessage += `${item.nama}\nRp ${formatCurrency(item.subtotal)}\n`; });
+                waMessage += `--------------------------------\n*GRAND TOTAL: Rp ${formatCurrency(data.grandTotalMedis)}*\n--------------------------------\n`;
+
+                // Kirim WA dengan callback untuk lanjutkan save setelah selesai
+                sendWhatsApp(WA_TARGET_JID, waMessage, function() {
+                    console.log("📤 Kasir WA selesai, melanjutkan aksi save asli...");
+                    
+                    // Lepas lock setelah 1 detik
+                    setTimeout(() => {
+                        isGlobalSendingKasir = false;
+                        console.log("🔓 Kasir Lock dibuka.");
+                    }, 1000);
+
+                    // Trigger klik asli pada tombol save
+                    saveBtn.removeEventListener('click', arguments.callee, true);
+                    saveBtn.click();
+                    setTimeout(() => saveBtn.addEventListener('click', arguments.callee, true), 2000);
+                });
             }, true);
+            
             saveBtn.setAttribute('data-receipt-hooked', 'true');
         }
     };

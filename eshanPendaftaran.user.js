@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kirim Data Pendaftaran ke WA & GSheet (Merged)
 // @namespace    http://tampermonkey.net/
-// @version      2.8
+// @version      2.9
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
 // @match        https://id1-eshan.co.id/pmim/*
@@ -149,8 +149,8 @@
         setTimeout(() => { if(toast) toast.remove(); }, 3000);
     };
 
-    // Kirim ke API
-    const sendToWA = (messageText) => {
+    // Kirim ke API dengan callback
+    const sendToWA = (messageText, callback) => {
         console.log("=== MENGIRIM WA ===", messageText);
         showToast("⏳ Mengirim data...", "#007bff");
 
@@ -160,6 +160,7 @@
             headers: { "Content-Type": "application/json" },
             data: JSON.stringify({ to: WA_TARGET_GROUP, message: messageText }),
             anonymous: true,
+            timeout: 5000, // Timeout 5 detik
             onload: function(res) {
                 if (res.status >= 200 && res.status < 300) {
                     console.log("✅ WA Berhasil");
@@ -168,10 +169,20 @@
                     console.error("❌ Gagal:", res.responseText);
                     showToast("❌ Gagal Kirim API", "#dc3545");
                 }
+                // Panggil callback setelah selesai (sukses atau gagal)
+                if (callback) callback();
             },
             onerror: function(err) {
                 console.error("❌ Error Jaringan", err);
                 showToast("❌ Error Koneksi", "#dc3545");
+                // Panggil callback meskipun error
+                if (callback) callback();
+            },
+            ontimeout: function() {
+                console.error("❌ Timeout");
+                showToast("❌ Timeout", "#dc3545");
+                // Panggil callback jika timeout
+                if (callback) callback();
             }
         });
     };
@@ -179,7 +190,7 @@
     // --- EVENT HANDLER ---
 
     const handleSaveClick = (event) => {
-        // PENTING: Kirim WA DULU sebelum event asli (karena halaman akan refresh)
+        // PENTING: Cegah aksi default dulu, kirim WA, baru lanjutkan save
         
         // 0. CEK HALAMAN (VALIDASI BARU)
         // Jika bukan di Tab Pendaftaran yang aktif, STOP.
@@ -191,6 +202,8 @@
         // 1. CEK GLOBAL LOCK
         if (isGlobalSending) {
             console.warn("⚠️ Double click dicegah oleh Global Lock.");
+            event.preventDefault();
+            event.stopPropagation();
             return; // Hentikan mutlak
         }
 
@@ -200,10 +213,14 @@
         // --- VALIDASI KERAS ---
         if (!d.nama || d.nama === '-' || d.nama.trim() === '') {
             console.warn("⛔ STOP: Nama pasien kosong/strip. Tidak dikirim ke WA.");
-            return;
+            return; // Biarkan proses save normal jalan
         }
 
-        // 2. AKTIFKAN LOCK
+        // 2. CEGAH DEFAULT ACTION (reload/submit)
+        event.preventDefault();
+        event.stopPropagation();
+
+        // 3. AKTIFKAN LOCK
         isGlobalSending = true;
 
         // Format Pesan
@@ -215,17 +232,32 @@
         message += `SpO2 ${d.spo} %\n`;
         message += `Suhu ${d.suhu} °C`;
 
-        // Kirim LANGSUNG tanpa delay (prioritas sebelum refresh)
-        sendToWA(message);
+        // Kirim WA dengan callback untuk lanjutkan save setelah selesai
+        sendToWA(message, function() {
+            // Callback: dipanggil setelah WA terkirim/gagal
+            console.log("📤 WA selesai, melanjutkan aksi save asli...");
+            
+            // Lepas lock setelah 1 detik
+            setTimeout(() => {
+                isGlobalSending = false;
+                console.log("🔓 Lock dibuka.");
+            }, 1000);
 
-        // 3. TIMER UNTUK MEMBUKA LOCK
-        // Jeda 3 detik sebelum boleh kirim lagi
-        setTimeout(() => {
-            isGlobalSending = false;
-            console.log("🔓 Lock dibuka, siap kirim lagi.");
-        }, 3000);
-        
-        // Event asli akan berjalan otomatis setelah handler ini selesai
+            // Trigger klik asli pada tombol save (tanpa handler kita)
+            const saveBtn = document.querySelector('#idButtonSave');
+            if (saveBtn) {
+                // Hapus listener sementara agar tidak loop
+                saveBtn.removeEventListener('click', handleSaveClick, true);
+                
+                // Klik tombol secara programatis
+                saveBtn.click();
+                
+                // Pasang kembali listener setelah delay
+                setTimeout(() => {
+                    saveBtn.addEventListener('click', handleSaveClick, true);
+                }, 2000);
+            }
+        });
     };
 
     // --- LOOP UTAMA ---
