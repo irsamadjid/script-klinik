@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Google Translate) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      2.9
+// @version      3.0
 // @description  Tombol panggil pasien menggunakan TTS Google Translate (tanpa API key).
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -256,13 +256,17 @@
 
     // --- Global Lock Variable ---
     let isGlobalSendingPelayanan = false;
+    let waAlreadySent = false; // Flag untuk tracking apakah WA sudah dikirim
 
     function hookSaveButtonPelayanan() {
         // Hanya hook jika halaman valid (breadcrumb sesuai)
         if (!isValidPelayananAddPage()) {
             // clear marker so it can be hooked later when page becomes valid
             const existing = document.getElementById('idButtonSave');
-            if (existing) existing.removeAttribute('data-pelayanan-wa');
+            if (existing) {
+                existing.removeAttribute('data-pelayanan-wa');
+                waAlreadySent = false; // Reset flag
+            }
             return;
         }
 
@@ -270,7 +274,7 @@
         if (!btn) return;
         if (btn.getAttribute('data-pelayanan-wa') === 'yes') return;
         
-        // PERBAIKAN: Cegah reload, kirim WA dulu, baru lanjutkan save
+        // STRATEGI BARU: Delay event asli, kirim WA di background, lanjutkan otomatis
         btn.addEventListener('click', function(evt) {
             try {
                 if (!isValidPelayananAddPage()) {
@@ -278,9 +282,16 @@
                     return;
                 }
 
+                // Jika WA sudah dikirim, biarkan event berjalan normal
+                if (waAlreadySent) {
+                    console.log('[Pelayanan WA] WA sudah terkirim sebelumnya, lanjutkan save...');
+                    waAlreadySent = false; // Reset untuk next time
+                    return; // Biarkan event asli jalan
+                }
+
                 // Cek global lock
                 if (isGlobalSendingPelayanan) {
-                    console.warn("⚠️ Pelayanan: Double click dicegah oleh Global Lock.");
+                    console.warn("⚠️ Pelayanan: Sedang mengirim WA, tunggu...");
                     evt.preventDefault();
                     evt.stopPropagation();
                     return;
@@ -292,30 +303,33 @@
                     return; // Biarkan proses save normal jalan
                 }
 
-                // Cegah default action (reload/submit)
+                // BLOKIR event hanya untuk click pertama (untuk delay)
                 evt.preventDefault();
                 evt.stopPropagation();
 
                 // Aktifkan lock
                 isGlobalSendingPelayanan = true;
 
-                // Kirim WA dengan callback untuk lanjutkan save setelah selesai
-                sendPelayananWA(name, function() {
-                    console.log('📤 Pelayanan WA selesai, melanjutkan aksi save asli...');
-                    
-                    // Lepas lock setelah 1 detik
-                    setTimeout(() => {
-                        isGlobalSendingPelayanan = false;
-                        console.log('🔓 Pelayanan Lock dibuka.');
-                    }, 1000);
+                console.log('[Pelayanan WA] Mengirim WA terlebih dahulu...');
 
-                    // Trigger klik asli pada tombol save
-                    btn.removeEventListener('click', arguments.callee, true);
-                    btn.click();
-                    setTimeout(() => btn.addEventListener('click', arguments.callee, true), 2000);
+                // Kirim WA tanpa blocking (fire and forget dengan timeout singkat)
+                sendPelayananWA(name, function() {
+                    console.log('✅ Pelayanan WA selesai dikirim');
+                    waAlreadySent = true; // Set flag bahwa WA sudah terkirim
+                    isGlobalSendingPelayanan = false;
+                    
+                    // Trigger klik ulang setelah WA terkirim
+                    console.log('[Pelayanan WA] Melanjutkan proses save...');
+                    setTimeout(() => {
+                        btn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySent = true
+                    }, 100);
                 });
 
-            } catch (e) { console.error('[Pelayanan WA] handler error', e); }
+            } catch (e) { 
+                console.error('[Pelayanan WA] handler error', e);
+                isGlobalSendingPelayanan = false;
+                waAlreadySent = false;
+            }
         }, true);
         btn.setAttribute('data-pelayanan-wa', 'yes');
         console.log('[Pelayanan WA] Hooked #idButtonSave');

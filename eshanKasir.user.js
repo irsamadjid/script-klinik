@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -279,6 +279,7 @@
 
     // --- Global Lock Variable ---
     let isGlobalSendingKasir = false;
+    let waAlreadySentKasir = false; // Flag untuk tracking apakah WA sudah dikirim
 
     const hookSaveButton = () => {
         // Hanya hook di halaman Tambah Kasir yang valid
@@ -289,33 +290,35 @@
         if (saveBtn && !saveBtn.hasAttribute('data-receipt-hooked')) {
             console.log("Tombol Simpan (#idButtonSave) ditemukan. Auto WA trigger ditambahkan.");
             
-            // PERBAIKAN: Cegah reload, kirim WA dulu, baru lanjutkan save
+            // STRATEGI BARU: Delay event asli, kirim WA di background, lanjutkan otomatis
             saveBtn.addEventListener('click', (event) => {
+                // Jika WA sudah dikirim, biarkan event berjalan normal
+                if (waAlreadySentKasir) {
+                    console.log('[Kasir WA] WA sudah terkirim sebelumnya, lanjutkan save...');
+                    waAlreadySentKasir = false; // Reset untuk next time
+                    return; // Biarkan event asli jalan
+                }
+
                 // Cek global lock
                 if (isGlobalSendingKasir) {
-                    console.warn("⚠️ Kasir: Double click dicegah oleh Global Lock.");
+                    console.warn("⚠️ Kasir: Sedang mengirim WA, tunggu...");
                     event.preventDefault();
                     event.stopPropagation();
                     return;
                 }
 
-                // Cegah default action (reload/submit)
+                const data = getTransactionData();
+                if (!data) {
+                    console.log("Kasir: Tidak ada data transaksi, lanjutkan save normal");
+                    return; // Biarkan proses save normal jalan
+                }
+
+                // BLOKIR event hanya untuk click pertama (untuk delay)
                 event.preventDefault();
                 event.stopPropagation();
 
                 // Aktifkan lock
                 isGlobalSendingKasir = true;
-
-                const data = getTransactionData();
-                if (!data) {
-                    console.log("Kasir: Tidak ada data transaksi, lanjutkan save normal");
-                    // Lepas lock dan lanjutkan
-                    isGlobalSendingKasir = false;
-                    saveBtn.removeEventListener('click', arguments.callee, true);
-                    saveBtn.click();
-                    setTimeout(() => saveBtn.addEventListener('click', arguments.callee, true), 2000);
-                    return;
-                }
 
                 console.log("Memproses Struk Digital (WA)...");
                 let waMessage = `*STRUK KASIR DIGITAL*\nPRAKTEK DOKTER IZZA\n--------------------------------\n`;
@@ -323,20 +326,17 @@
                 data.items.forEach(item => { waMessage += `${item.nama}\nRp ${formatCurrency(item.subtotal)}\n`; });
                 waMessage += `--------------------------------\n*GRAND TOTAL: Rp ${formatCurrency(data.grandTotalMedis)}*\n--------------------------------\n`;
 
-                // Kirim WA dengan callback untuk lanjutkan save setelah selesai
+                // Kirim WA tanpa blocking (fire and forget dengan timeout singkat)
                 sendWhatsApp(WA_TARGET_JID, waMessage, function() {
-                    console.log("📤 Kasir WA selesai, melanjutkan aksi save asli...");
+                    console.log("✅ Kasir WA selesai dikirim");
+                    waAlreadySentKasir = true; // Set flag bahwa WA sudah terkirim
+                    isGlobalSendingKasir = false;
                     
-                    // Lepas lock setelah 1 detik
+                    // Trigger klik ulang setelah WA terkirim
+                    console.log('[Kasir WA] Melanjutkan proses save...');
                     setTimeout(() => {
-                        isGlobalSendingKasir = false;
-                        console.log("🔓 Kasir Lock dibuka.");
-                    }, 1000);
-
-                    // Trigger klik asli pada tombol save
-                    saveBtn.removeEventListener('click', arguments.callee, true);
-                    saveBtn.click();
-                    setTimeout(() => saveBtn.addEventListener('click', arguments.callee, true), 2000);
+                        saveBtn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySentKasir = true
+                    }, 100);
                 });
             }, true);
             

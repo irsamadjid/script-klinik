@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kirim Data Pendaftaran ke WA & GSheet (Merged)
 // @namespace    http://tampermonkey.net/
-// @version      2.9
+// @version      3.0
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
 // @match        https://id1-eshan.co.id/pmim/*
@@ -25,6 +25,7 @@
 
     // --- GLOBAL LOCK VARIABLE (KUNCI UTAMA) ---
     let isGlobalSending = false;
+    let waAlreadySent = false; // Flag untuk tracking apakah WA sudah dikirim
 
     // --- VALIDASI HALAMAN (Baru) ---
     // Mengecek apakah kita benar-benar berada di Tab Pendaftaran yang aktif
@@ -190,7 +191,7 @@
     // --- EVENT HANDLER ---
 
     const handleSaveClick = (event) => {
-        // PENTING: Cegah aksi default dulu, kirim WA, baru lanjutkan save
+        // STRATEGI BARU: Delay event asli, kirim WA di background, lanjutkan otomatis
         
         // 0. CEK HALAMAN (VALIDASI BARU)
         // Jika bukan di Tab Pendaftaran yang aktif, STOP.
@@ -199,9 +200,16 @@
              return;
         }
 
+        // Jika WA sudah dikirim, biarkan event berjalan normal
+        if (waAlreadySent) {
+            console.log('[Pendaftaran WA] WA sudah terkirim sebelumnya, lanjutkan save...');
+            waAlreadySent = false; // Reset untuk next time
+            return; // Biarkan event asli jalan
+        }
+
         // 1. CEK GLOBAL LOCK
         if (isGlobalSending) {
-            console.warn("⚠️ Double click dicegah oleh Global Lock.");
+            console.warn("⚠️ Pendaftaran: Sedang mengirim WA, tunggu...");
             event.preventDefault();
             event.stopPropagation();
             return; // Hentikan mutlak
@@ -216,12 +224,14 @@
             return; // Biarkan proses save normal jalan
         }
 
-        // 2. CEGAH DEFAULT ACTION (reload/submit)
+        // BLOKIR event hanya untuk click pertama (untuk delay)
         event.preventDefault();
         event.stopPropagation();
 
         // 3. AKTIFKAN LOCK
         isGlobalSending = true;
+
+        console.log('[Pendaftaran WA] Mengirim WA terlebih dahulu...');
 
         // Format Pesan
         let message = `${d.nama} / ${d.jk} / ${d.usia} / ${d.bb}kg\n\n`;
@@ -232,30 +242,20 @@
         message += `SpO2 ${d.spo} %\n`;
         message += `Suhu ${d.suhu} °C`;
 
-        // Kirim WA dengan callback untuk lanjutkan save setelah selesai
+        // Kirim WA tanpa blocking (fire and forget dengan timeout singkat)
         sendToWA(message, function() {
             // Callback: dipanggil setelah WA terkirim/gagal
-            console.log("📤 WA selesai, melanjutkan aksi save asli...");
+            console.log("✅ Pendaftaran WA selesai dikirim");
+            waAlreadySent = true; // Set flag bahwa WA sudah terkirim
+            isGlobalSending = false;
             
-            // Lepas lock setelah 1 detik
-            setTimeout(() => {
-                isGlobalSending = false;
-                console.log("🔓 Lock dibuka.");
-            }, 1000);
-
-            // Trigger klik asli pada tombol save (tanpa handler kita)
+            // Trigger klik ulang setelah WA terkirim
+            console.log('[Pendaftaran WA] Melanjutkan proses save...');
             const saveBtn = document.querySelector('#idButtonSave');
             if (saveBtn) {
-                // Hapus listener sementara agar tidak loop
-                saveBtn.removeEventListener('click', handleSaveClick, true);
-                
-                // Klik tombol secara programatis
-                saveBtn.click();
-                
-                // Pasang kembali listener setelah delay
                 setTimeout(() => {
-                    saveBtn.addEventListener('click', handleSaveClick, true);
-                }, 2000);
+                    saveBtn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySent = true
+                }, 100);
             }
         });
     };
