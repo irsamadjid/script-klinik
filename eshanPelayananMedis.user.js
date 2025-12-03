@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Google Translate) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.1
 // @description  Tombol panggil pasien menggunakan TTS Google Translate (tanpa API key).
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -18,7 +18,7 @@
 (function() {
     'use strict';
 
-    console.log("TTS Script v2.8 (Google Translate): Dimulai.");
+    console.log("TTS Script v3.1 (Google Translate): Dimulai.");
     // --- Konfigurasi Bahasa untuk TTS Google Translate ---
     const TTS_LANG = 'id'; // Bahasa Indonesia
 
@@ -54,6 +54,15 @@
         if (age > 25) return lowerGender === 'l' ? 'Bapak' : 'Ibu';
 
         return 'Pasien';
+    }
+
+    // --- Fungsi untuk mengkonversi nama ke Sentence Case ---
+    function toSentenceCase(text) {
+        if (!text) return text;
+        // Ubah ke lowercase dulu, lalu kapitalkan huruf pertama setiap kata
+        return text.toLowerCase().replace(/\b\w/g, function(char) {
+            return char.toUpperCase();
+        });
     }
 
     // --- TTS Google Translate ---
@@ -142,6 +151,9 @@
         const usia = usiaEl.textContent.replace('Usia :', '').replace(',', '').trim();
 
         if (nama && jk && usia) {
+            // Konversi nama ke sentence case untuk TTS yang lebih natural
+            const namaSentenceCase = toSentenceCase(nama);
+            
             const generalBtn = createButton('Panggil (Umum)', playGeneralTTS);
             generalBtn.style.borderColor = '#28a745';
             generalBtn.style.backgroundColor = '#f6ffed';
@@ -149,7 +161,7 @@
 
             const geminiBtn = createButton(`Panggil ${nama}`, (e) => {
                 const panggilan = getPanggilan(jk, usia);
-                const textToSpeak = `${panggilan} ${nama}, Silahkan masuk ruang periksa`;
+                const textToSpeak = `${panggilan} ${namaSentenceCase}, Silahkan masuk ruang periksa`;
                 playGoogleTTS(textToSpeak, e.target);
             });
             geminiBtn.style.borderColor = '#007bff';
