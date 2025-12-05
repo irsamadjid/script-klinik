@@ -231,22 +231,22 @@
                     } else {
                         console.error(prefix, '❌ Failed to send', res.status, res.statusText, res.responseText);
                     }
-                    // Do not block caller; fire-and-forget
+                    // Resume caller now that request finished
+                    try { if (callback) callback(); } catch (e) { console.error(prefix, 'callback error', e); }
                 },
                 onerror: function(err) {
                     console.error(prefix, 'Network error', err);
+                    try { if (callback) callback(); } catch (e) { console.error(prefix, 'callback error', e); }
                 },
                 ontimeout: function() {
                     console.error(prefix, 'Timeout while sending WA');
+                    try { if (callback) callback(); } catch (e) { console.error(prefix, 'callback error', e); }
                 }
             });
-
-            // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
-            if (callback) callback();
         } catch (e) {
             console.error(prefix, 'Exception sending WA', e);
             // Panggil callback jika exception
-            if (callback) callback();
+            try { if (callback) callback(); } catch (ee) { console.error(prefix, 'callback error', ee); }
         }
     }
 
@@ -332,9 +332,10 @@
                     
                     // Trigger klik ulang setelah WA terkirim
                     console.log('[Pelayanan WA] Melanjutkan proses save...');
+                    // Delay 1 detik sesuai permintaan
                     setTimeout(() => {
                         btn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySent = true
-                    }, 100);
+                    }, 1000);
                 });
 
             } catch (e) { 

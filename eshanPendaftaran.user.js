@@ -164,7 +164,7 @@
             anonymous: true,
             timeout: 500, // Timeout 500 ms (fire-and-forget)
             onload: function(res) {
-                // Log result but do not block caller (fire-and-forget)
+                // Log result and then resume caller
                 if (res.status >= 200 && res.status < 300) {
                     console.log("✅ WA Berhasil", res.status);
                     showToast("✅ Terkirim!", "#28a745");
@@ -172,19 +172,19 @@
                     console.error("❌ Gagal:", res.status, res.responseText);
                     showToast("❌ Gagal Kirim API", "#dc3545");
                 }
+                try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
             },
             onerror: function(err) {
                 console.error("❌ Error Jaringan", err);
                 showToast("❌ Error Koneksi", "#dc3545");
+                try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
             },
             ontimeout: function() {
                 console.error("❌ Timeout");
                 showToast("❌ Timeout", "#dc3545");
+                try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
             }
         });
-
-        // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
-        if (callback) callback();
     };
 
     // --- EVENT HANDLER ---
@@ -252,9 +252,10 @@
             console.log('[Pendaftaran WA] Melanjutkan proses save...');
             const saveBtn = document.querySelector('#idButtonSave');
             if (saveBtn) {
+                // Delay 1 detik sesuai permintaan
                 setTimeout(() => {
                     saveBtn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySent = true
-                }, 100);
+                }, 1000);
             }
         });
     };

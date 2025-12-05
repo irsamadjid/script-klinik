@@ -122,18 +122,18 @@
                     } else {
                        console.error(`Gagal Kirim! Status: ${response.status}\nRespon: ${response.responseText}`);
                     }
-                    // Do not block caller; fire-and-forget handled after request was started
+                    // Invoke resume callback now that request finished
+                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
                 },
                 onerror: function(err) { 
                     console.error("Network Error:", err);
+                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
                 },
                 ontimeout: function() { 
                     console.error("Timeout! Server tidak merespon.");
+                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
                 }
             });
-
-            // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
-            if (callback) callback();
     };
 
     // --- Data Extraction ---
@@ -334,9 +334,10 @@
                     
                     // Trigger klik ulang setelah WA terkirim
                     console.log('[Kasir WA] Melanjutkan proses save...');
+                    // Delay 1 detik (user requested) sebelum melanjutkan event asli
                     setTimeout(() => {
                         saveBtn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySentKasir = true
-                    }, 100);
+                    }, 1000);
                 });
             }, true);
             
