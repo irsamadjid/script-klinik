@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Google Translate) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.2
 // @description  Tombol panggil pasien menggunakan TTS Google Translate (tanpa API key).
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -10,6 +10,7 @@
 // @connect      192.168.1.10
 // @connect      192.168.1.10:5001
 // @connect      wabot.dokterizza.my.id
+// @connect      wa.api.dokterizza.my.id
 // @connect      translate.google.com
 // @updateURL    https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
 // @downloadURL  https://raw.githubusercontent.com/irsamadjid/script-klinik/main/eshanPelayananMedis.user.js
@@ -195,7 +196,8 @@
     });
     // --- WA NOTIFICATION ON SAVE (Pelayanan) ---
     // Mengirim pesan WA ketika tombol #idButtonSave diklik
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
+    // New WA API endpoint (uses API key header X-API-Key)
+    const WA_API_URL = "https://wa.api.dokterizza.my.id/api/send";
     const WA_TARGET_GROUP = "120363423716715740@g.us";
 
     function getPatientNameHeader() {
@@ -218,10 +220,10 @@
             GM_xmlhttpRequest({
                 method: 'POST',
                 url: WA_API_URL,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': 'Irsa&Izza' },
                 data: JSON.stringify({ to: WA_TARGET_GROUP, message: message }),
                 anonymous: true,
-                timeout: 5000,
+                timeout: 500,
                 onload: function(res) {
                     console.log(prefix, 'onload status=', res.status, 'response=', res.responseText);
                     if (res.status >= 200 && res.status < 300) {
@@ -229,20 +231,18 @@
                     } else {
                         console.error(prefix, '❌ Failed to send', res.status, res.statusText, res.responseText);
                     }
-                    // Panggil callback setelah selesai (sukses atau gagal)
-                    if (callback) callback();
+                    // Do not block caller; fire-and-forget
                 },
                 onerror: function(err) {
                     console.error(prefix, 'Network error', err);
-                    // Panggil callback meskipun error
-                    if (callback) callback();
                 },
                 ontimeout: function() {
                     console.error(prefix, 'Timeout while sending WA');
-                    // Panggil callback jika timeout
-                    if (callback) callback();
                 }
             });
+
+            // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
+            if (callback) callback();
         } catch (e) {
             console.error(prefix, 'Exception sending WA', e);
             // Panggil callback jika exception

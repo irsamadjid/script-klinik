@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -19,7 +19,8 @@
     'use strict';
 
     // --- Configuration ---
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
+    // New WA API endpoint (uses API key header X-API-Key)
+    const WA_API_URL = "https://wa.api.dokterizza.my.id/api/send";
     const WA_TARGET_JID = "120363422166744171@g.us";
 
     // --- Helper Functions ---
@@ -102,38 +103,37 @@
     const sendWhatsApp = (targetJid, messageText, callback) => {
         console.log("=== SENDING WA (Silent) ===");
         GM_xmlhttpRequest({
-            method: "POST",
-            url: WA_API_URL,
-            headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-cache"
-            },
-            data: JSON.stringify({
-                to: targetJid,
-                message: messageText
-            }),
-            anonymous: true,
-            timeout: 5000,
-            onload: function(response) {
-                if (response.status >= 200 && response.status < 300) {
-                   console.log("WA Sukses Terkirim");
-                } else {
-                   console.error(`Gagal Kirim! Status: ${response.status}\nRespon: ${response.responseText}`);
+                method: "POST",
+                url: WA_API_URL,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache",
+                    "X-API-Key": "Irsa&Izza"
+                },
+                data: JSON.stringify({
+                    to: targetJid,
+                    message: messageText
+                }),
+                anonymous: true,
+                timeout: 500,
+                onload: function(response) {
+                    if (response.status >= 200 && response.status < 300) {
+                       console.log("WA Sukses Terkirim");
+                    } else {
+                       console.error(`Gagal Kirim! Status: ${response.status}\nRespon: ${response.responseText}`);
+                    }
+                    // Do not block caller; fire-and-forget handled after request was started
+                },
+                onerror: function(err) { 
+                    console.error("Network Error:", err);
+                },
+                ontimeout: function() { 
+                    console.error("Timeout! Server tidak merespon.");
                 }
-                // Panggil callback setelah selesai (sukses atau gagal)
-                if (callback) callback();
-            },
-            onerror: function(err) { 
-                console.error("Network Error:", err);
-                // Panggil callback meskipun error
-                if (callback) callback();
-            },
-            ontimeout: function() { 
-                console.error("Timeout! Server tidak merespon.");
-                // Panggil callback jika timeout
-                if (callback) callback();
-            }
-        });
+            });
+
+            // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
+            if (callback) callback();
     };
 
     // --- Data Extraction ---

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kirim Data Pendaftaran ke WA & GSheet (Merged)
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.1
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
 // @match        https://id1-eshan.co.id/pmim/*
@@ -20,7 +20,8 @@
     'use strict';
 
     // --- KONFIGURASI ---
-    const WA_API_URL = "https://wabot.dokterizza.my.id/send";
+    // New WA API endpoint (uses API key header X-API-Key)
+    const WA_API_URL = "https://wa.api.dokterizza.my.id/api/send";
     const WA_TARGET_GROUP = "120363423716715740@g.us";
 
     // --- GLOBAL LOCK VARIABLE (KUNCI UTAMA) ---
@@ -158,34 +159,32 @@
         GM_xmlhttpRequest({
             method: "POST",
             url: WA_API_URL,
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-API-Key": "Irsa&Izza" },
             data: JSON.stringify({ to: WA_TARGET_GROUP, message: messageText }),
             anonymous: true,
-            timeout: 5000, // Timeout 5 detik
+            timeout: 500, // Timeout 500 ms (fire-and-forget)
             onload: function(res) {
+                // Log result but do not block caller (fire-and-forget)
                 if (res.status >= 200 && res.status < 300) {
-                    console.log("✅ WA Berhasil");
+                    console.log("✅ WA Berhasil", res.status);
                     showToast("✅ Terkirim!", "#28a745");
                 } else {
-                    console.error("❌ Gagal:", res.responseText);
+                    console.error("❌ Gagal:", res.status, res.responseText);
                     showToast("❌ Gagal Kirim API", "#dc3545");
                 }
-                // Panggil callback setelah selesai (sukses atau gagal)
-                if (callback) callback();
             },
             onerror: function(err) {
                 console.error("❌ Error Jaringan", err);
                 showToast("❌ Error Koneksi", "#dc3545");
-                // Panggil callback meskipun error
-                if (callback) callback();
             },
             ontimeout: function() {
                 console.error("❌ Timeout");
                 showToast("❌ Timeout", "#dc3545");
-                // Panggil callback jika timeout
-                if (callback) callback();
             }
         });
+
+        // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
+        if (callback) callback();
     };
 
     // --- EVENT HANDLER ---
