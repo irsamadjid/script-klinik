@@ -22,7 +22,7 @@
     // --- KONFIGURASI ---
     // New WA API endpoint (uses API key header X-API-Key)
     const WA_API_URL = "https://wa.api.dokterizza.my.id/api/send";
-    const WA_TARGET_GROUP = "120363423716715740@g.us";
+    const WA_TARGET_GROUP = "120363417854701532@g.us";
 
     // --- GLOBAL LOCK VARIABLE (KUNCI UTAMA) ---
     let isGlobalSending = false;
