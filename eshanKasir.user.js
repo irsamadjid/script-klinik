@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      2.0
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id1-eshan.co.id/pmim/*
@@ -74,7 +74,12 @@
     };
 
     const cleanCurrency = (currencyStr) => {
-        return String(currencyStr).replace(/[.,]/g, '');
+        let str = String(currencyStr);
+        // Jika berakhiran .00 atau ,00 (atau 2 digit desimal lainnya), buang 3 karakter terakhir
+        if (str.match(/[,.]\d{2}$/)) {
+            str = str.slice(0, -3); 
+        }
+        return str.replace(/[^0-9]/g, '');
     };
 
     // --- Validation Logic ---
@@ -122,18 +127,18 @@
                     } else {
                        console.error(`Gagal Kirim! Status: ${response.status}\nRespon: ${response.responseText}`);
                     }
-                    // Invoke resume callback now that request finished
-                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
+                    // Do not block caller; fire-and-forget handled after request was started
                 },
                 onerror: function(err) { 
                     console.error("Network Error:", err);
-                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
                 },
                 ontimeout: function() { 
                     console.error("Timeout! Server tidak merespon.");
-                    try { if (callback) callback(); } catch (e) { console.error('callback error', e); }
                 }
             });
+
+            // Fire-and-forget: consider the JSON request dispatched, invoke callback immediately
+            if (callback) callback();
     };
 
     // --- Data Extraction ---
@@ -249,7 +254,15 @@
                     const tunaiRow = await waitForElement(`#tbodypaymenttype tr[id='${tunaiCheckbox.value}']`);
                     const tunaiSubtotalInput = tunaiRow.querySelector('input[id^="paymenttype_value_"]');
                     if (tunaiSubtotalInput) {
-                        tunaiSubtotalInput.value = totalTagihanInput.value;
+                        
+                        // FIX: Ekstrak angka bulat dengan aman
+                        let tagihan = totalTagihanInput.value || "0";
+                        if (tagihan.match(/[,.]\d{2}$/)) {
+                            tagihan = tagihan.slice(0, -3); // Buang .00 atau ,00 di akhir
+                        }
+                        tagihan = tagihan.replace(/[^0-9]/g, ''); // Buang semua pemisah ribuan
+
+                        tunaiSubtotalInput.value = tagihan;
                         tunaiSubtotalInput.dispatchEvent(new Event('input', { bubbles: true }));
                         tunaiSubtotalInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
                     }
@@ -334,10 +347,9 @@
                     
                     // Trigger klik ulang setelah WA terkirim
                     console.log('[Kasir WA] Melanjutkan proses save...');
-                    // Delay 1 detik (user requested) sebelum melanjutkan event asli
                     setTimeout(() => {
                         saveBtn.click(); // Klik ulang, kali ini akan lolos karena waAlreadySentKasir = true
-                    }, 1000);
+                    }, 100);
                 });
             }, true);
             
