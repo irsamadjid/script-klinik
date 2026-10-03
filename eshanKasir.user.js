@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Cetak Struk & Lunas Kasir (58mm) - Auto WA on Save
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      3.0
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
 // @match        https://id4-eshan.co.id/pmim/*

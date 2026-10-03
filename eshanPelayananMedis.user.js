@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTS Panggilan Pasien (Google Translate) - Halaman Medis
 // @namespace    http://tampermonkey.net/
-// @version      3.3
+// @version      4.0
 // @description  Tombol panggil pasien menggunakan TTS Google Translate (tanpa API key).
 // @author       Gemini
 // @match        https://id4-eshan.co.id/pmim/*
