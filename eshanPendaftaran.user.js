@@ -4,7 +4,7 @@
 // @version      3.2
 // @description  Mengirim data pasien ke WA otomatis + Kirim ke GSheet (Merged)
 // @author       Gemini & Anda
-// @match        https://id1-eshan.co.id/pmim/*
+// @match        https://id4-eshan.co.id/pmim/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @connect      192.168.1.10

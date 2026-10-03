@@ -4,7 +4,7 @@
 // @version      2.0
 // @description  Tombol Simpan (#idButtonSave) otomatis kirim WA. Tombol Cetak Struk manual hanya print fisik.
 // @author       Gemini
-// @match        https://id1-eshan.co.id/pmim/*
+// @match        https://id4-eshan.co.id/pmim/*
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @connect      192.168.1.10
